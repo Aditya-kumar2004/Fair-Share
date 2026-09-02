@@ -6,25 +6,41 @@ export function formatMoney(amount) {
 }
 
 export function splitEqual(amount, ids) {
-  const n = ids.length || 1;
-  const share = Number((amount / n).toFixed(2));
+  if (!ids.length) return {};
+  const totalCents = Math.round(Number(amount) * 100);
+  const n = ids.length;
+  const baseCents = Math.floor(totalCents / n);
+  const remainder = totalCents - baseCents * n;
+
   const shares = {};
-  for (const id of ids) {
-    shares[id] = share;
-  }
+  ids.forEach((id, i) => {
+    shares[id] = (baseCents + (i < remainder ? 1 : 0)) / 100;
+  });
   return shares;
 }
 
 export function percentsSumTo100(percents) {
   const values = Object.values(percents).map(Number);
-  return values.reduce((a, b) => a + b, 0) === 100;
+  const sum = values.reduce((a, b) => a + b, 0);
+  return Math.abs(sum - 100) < 0.001;
 }
 
 export function splitByPercent(amount, percents) {
+  const entries = Object.entries(percents);
+  if (!entries.length) return {};
+  const totalCents = Math.round(Number(amount) * 100);
   const shares = {};
-  for (const [id, pct] of Object.entries(percents)) {
-    shares[id] = Number(((amount * Number(pct)) / 100).toFixed(2));
-  }
+  let allocatedCents = 0;
+
+  entries.forEach(([id, pct], i) => {
+    if (i === entries.length - 1) {
+      shares[id] = (totalCents - allocatedCents) / 100;
+    } else {
+      const shareCents = Math.round((totalCents * Number(pct)) / 100);
+      shares[id] = shareCents / 100;
+      allocatedCents += shareCents;
+    }
+  });
   return shares;
 }
 

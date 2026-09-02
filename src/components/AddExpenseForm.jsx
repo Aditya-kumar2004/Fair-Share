@@ -49,21 +49,32 @@ export default function AddExpenseForm({ members, onAdd }) {
       setError("Pick at least one person to split with.");
       return;
     }
-    if (splitType === "percent" && !percentsSumTo100(percents)) {
-      setError("Percentages must add to 100.");
-      return;
+    const cleanPercents = {};
+    if (splitType === "percent") {
+      for (const id of splitWith) {
+        cleanPercents[id] = Number(percents[id] || 0);
+      }
+      if (!percentsSumTo100(cleanPercents)) {
+        setError("Percentages must add to 100.");
+        return;
+      }
     }
+
+    const [y, m, d] = date.split("-");
 
     onAdd({
       description: description.trim(),
       amount: n,
-      paidBy: Number(paidBy),
+      paidBy: Number(paidBy || members[0]?.id),
       splitType,
       splitWith: splitWith.map(Number),
-      percents: splitType === "percent" ? percents : undefined,
-      date: new Date(date),
+      percents: splitType === "percent" ? cleanPercents : undefined,
+      date: new Date(Number(y), Number(m) - 1, Number(d)),
       category,
     });
+
+    setDescription("");
+    setAmount("");
   }
 
   return (
@@ -179,7 +190,7 @@ export default function AddExpenseForm({ members, onAdd }) {
                   step="0.01"
                   value={percents[m.id] ?? ""}
                   onChange={(e) =>
-                    setPercents((p) => ({ ...p, [m.id]: Number(e.target.value) }))
+                    setPercents((p) => ({ ...p, [m.id]: e.target.value }))
                   }
                 />
               </div>

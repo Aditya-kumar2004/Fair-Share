@@ -4,10 +4,21 @@ function hydrate(data) {
   return {
     groupName: data.groupName,
     members: data.members.map((m) => ({ ...m })),
-    expenses: data.expenses.map((e) => ({
-      ...e,
-      date: new Date(e.date),
-    })),
+    expenses: data.expenses.map((e) => {
+      let d = e.date;
+      if (typeof e.date === "string") {
+        const match = e.date.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (match) {
+          d = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+        } else {
+          d = new Date(e.date);
+        }
+      }
+      return {
+        ...e,
+        date: d,
+      };
+    }),
   };
 }
 
@@ -19,7 +30,7 @@ export function loadState(seed) {
       localStorage.setItem(KEY, JSON.stringify(initial));
       return initial;
     }
-    return JSON.parse(raw);
+    return hydrate(JSON.parse(raw));
   } catch {
     return hydrate(seed);
   }
@@ -44,11 +55,25 @@ export function reducer(state, action) {
       return { ...state, expenses: [...state.expenses, action.expense] };
     }
     case "DELETE_EXPENSE": {
+      if (action.id !== undefined) {
+        return {
+          ...state,
+          expenses: state.expenses.filter((e) => e.id !== action.id),
+        };
+      }
       const next = state.expenses.slice();
       next.splice(action.index, 1);
       return { ...state, expenses: next };
     }
     case "UPDATE_EXPENSE": {
+      if (action.id !== undefined) {
+        return {
+          ...state,
+          expenses: state.expenses.map((e) =>
+            e.id === action.id ? { ...e, ...action.patch } : e
+          ),
+        };
+      }
       const next = state.expenses.slice();
       next[action.index] = { ...next[action.index], ...action.patch };
       return { ...state, expenses: next };
